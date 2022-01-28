@@ -137,6 +137,7 @@ class ResourceCoverage(TestResourcesBase):
             (resources.RepositoryResource, 'delete_tag', ['tagname']),
             (resources.RepositoryResource, 'hooks', []),
             (resources.RepositoryResource, 'update', ['name']),
+            (resources.RepositoryResource, 'update', ['name', 'description', True, True]),
             (resources.RepositoryResource, 'move', ['project']),
             (resources.RepositoryResource, 'delete', []),
             (resources.RepositoryResource, 'pull_request', ['id']),
