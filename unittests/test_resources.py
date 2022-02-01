@@ -114,7 +114,10 @@ class ResourceCoverage(TestResourcesBase):
             (resources.PullRequestResource, 'activities', []),
             (resources.PullRequestResource, 'changes', []),
             (resources.PullRequestResource, 'commits', []),
-
+            (resources.PullRequestResource, 'comments', ['path']),
+            (resources.PullRequestResource, 'comments', ['some/file.txt', 'NONE']),
+            (resources.PullRequestResource, 'diffs', []),
+            (resources.PullRequestResource, 'diffs', ['some/file.txt', 3, 'UNKNOWN', 'deadbeef', 'beefdead', 'original/path.txt', False, True]),
             (resources.RepositoryResource, 'audit', []),
             (resources.RepositoryResource, 'create_outgoing_pull_request', ['title', 'from', 'to']),
             (resources.RepositoryResource, 'create_incoming_pull_request', ['title', 'from', 'to']),
