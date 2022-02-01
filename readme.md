@@ -27,6 +27,15 @@ A simple wrapper for the Atlassian's Bitbucket Server / Bitbucket Datacenter (fo
     new_repo.set_group_permission("dev-team", "REPO_WRITE")
 
 
+#### Object Internals
+
+All `resource.BitbucketObject` subclasses' attributes are dynamically accessed directly from the JSON dictionary returned by the Bitbucket server stored in `obj._raw`.
+Any key present in the `obj._raw` dictionary can be accessed with `obj.key`.
+
+
+For example, the `slug` attribute for a repository is accessed either by
+`repo.slug` or `repo._raw["slug"]`.
+
 ## Installation
 
 Install the library using pip:

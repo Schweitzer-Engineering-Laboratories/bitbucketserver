@@ -32,7 +32,12 @@ class BitbucketAttribute(dict):
 
 
 class BitbucketObject(object):
-    """Base Bitbucket Server resource object."""
+    """Base Bitbucket Server resource object.
+
+    Attributes for each object are dynamically generated and accessed using
+    the _raw dictionary from Bitbucket. All keys from the dictionary are
+    available as direct attributes of the objects.
+    """
 
     _raw = None
     _server = None
