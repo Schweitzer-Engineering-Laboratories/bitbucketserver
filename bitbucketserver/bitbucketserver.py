@@ -2120,6 +2120,55 @@ class BitbucketServer(object):
         }
         return self.conn.get_paged(uri, parameters=params)
 
+    def pull_request_diffs(self, project, slug, request_id, path=None,
+            context_lines=None, diff_type=None, since_id=None, until_id=None,
+            src_path=None, ignore_whitespace=False, with_comments=None):
+        """Get the diff from within a pull request.
+
+        Note: this endpoint is currently not paged.
+        The server will internally apply a hard cap to the streamed lines,
+        and it is not possible to request subsequent pages if that cap is exceeded.
+
+        Args:
+            project (str): the project key
+            slug (str): the repo slug
+            request_id (int): the pull request ID#
+            path (str, optional): The path within the repo to diff.
+                Leave empty to pull all changes.
+            context_lines (int, optional): Number of lines of context for the diff.
+            diff_type (str, optional): the type of diff to request.
+            since_id (str, optional): since commit hash to fetch diff from
+            until_id (str, optional): until commit hash to fetch diff to
+            src_path (str, optional): the previous path for the file,
+                if it has been moved or copied.
+            ignore_whitespace (bool, optional): whitespace flag. Defaults to False.
+                If specified, will send the value of 'ignore-all' to ignore whitespace.
+            with_comments (bool, optional): flag to include comments or not.
+                When left blank, uses Bitbucket's default of include=True.
+
+        Returns:
+            dict: diff dictionary of the results.
+        """
+        uri = f'projects/{project}/repos/{slug}/pull-requests/{request_id}/diff'
+        if path is not None:
+            uri = f"{uri}/{path}"
+        params = {}
+        if context_lines is not None:
+            params['contextLines'] = context_lines
+        if diff_type is not None:
+            params['diffType'] = diff_type
+        if since_id is not None:
+            params['sinceId'] = since_id
+        if until_id is not None:
+            params['untilId'] = until_id
+        if src_path is not None:
+            params['srcPath'] = src_path
+        if ignore_whitespace:
+            params['whitespace'] = 'ignore-all'
+        if with_comments is not None:
+            params['contextLines'] = with_comments
+        return self.conn.get(uri, parameters=params)
+
     def pull_request_tasks(self, project, slug, request_id):
         """Get the tasks associated with a pull request.
 

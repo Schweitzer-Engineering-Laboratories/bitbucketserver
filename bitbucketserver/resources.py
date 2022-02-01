@@ -32,7 +32,12 @@ class BitbucketAttribute(dict):
 
 
 class BitbucketObject(object):
-    """Base Bitbucket Server resource object."""
+    """Base Bitbucket Server resource object.
+
+    Attributes for each object are dynamically generated and accessed using
+    the _raw dictionary from Bitbucket. All keys from the dictionary are
+    available as direct attributes of the objects.
+    """
 
     _raw = None
     _server = None
@@ -855,7 +860,14 @@ class PullRequestResource(RepoContextBitbucketObject):
     def commits(self):
         return self.server.pull_request_commits(self._parent_project_key, self._parent_slug, self.id)
 
-    # TODO: pull request diffs
+    def comments(self, path, anchor_state='ALL'):
+        return self.server.pull_request_comments(self._parent_project_key, self._parent_slug, self.id, path, anchor_state)
+
+    def diffs(self, path=None, context_lines=None, diff_type=None,
+            since_id=None, until_id=None, src_path=None,
+            ignore_whitespace=False, with_comments=None):
+        return self.server.pull_request_diffs(self._parent_project_key, self._parent_slug, self.id,
+            path, context_lines, diff_type, since_id, until_id, src_path, ignore_whitespace, with_comments)
 
 
 class PullRequestContextBitbucketObject(RepoContextBitbucketObject):
