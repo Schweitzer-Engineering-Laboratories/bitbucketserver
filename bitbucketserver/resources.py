@@ -1222,19 +1222,21 @@ class RepositoryResource(BitbucketObject):
         """
         return self.server.repo_hooks(self.project.key, self.slug)
 
-    def update(self, new_name=None, forkable=None, public=None):
+    def update(self, new_name=None, description=None, forkable=None, public=None):
         """Update this repo.
 
         Args:
             new_name (optional str): the new name for the repo
+            description (Optional [str]): update the repository description.
             forkable (optional bool): the forkable flag
             public (optional bool): the public flag
 
         Returns:
             None
         """
-        self._update(self.server.update_repo(self.project.key, self.slug, new_name=new_name, forkable=forkable,
-                                             public=public))
+        self._update(self.server.update_repo(self.project.key, self.slug,
+            description=description, new_name=new_name, forkable=forkable,
+            public=public))
 
     def move(self, new_project, new_name=None):
         """Move this repo to a new project.

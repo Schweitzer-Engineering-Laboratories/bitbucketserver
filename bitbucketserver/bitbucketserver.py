@@ -538,7 +538,7 @@ class BitbucketServer(object):
         uri = f'repos/{repo_id}'
         return resources.RepositoryResource(self.conn.get(uri, base=self.api_versions.mirroring), self)
 
-    def create_repo(self, project, repo_name, forkable=True, public=False):
+    def create_repo(self, project, repo_name, description=None, forkable=True, public=False):
         """Create a new repo in the given project.
 
         Args:
@@ -546,6 +546,7 @@ class BitbucketServer(object):
                 When creating a user repo, supply `~username` as the project.
             repo_name (str): The plain English name of the new repo.
                 Bitbucket will auto-create the repo slug.
+            description (Optional [str]): repository description.
             forkable (Optional [bool]): Flag for if the repo is forkable or not.
                 Defaults to True.
             public (Optional [bool]): Flag for if the repo is publically available.
@@ -562,7 +563,8 @@ class BitbucketServer(object):
             'name': repo_name,
             'scmId': 'git',
             'forkable': forkable,
-            'public': public
+            'public': public,
+            'description': description
         }
         log.info("creating new repo '%s' in project '%s'", repo_name, project)
         log.debug(payload)
@@ -587,12 +589,13 @@ class BitbucketServer(object):
             raise Exception("Delete failed:", resp.reason)
         return True
 
-    def update_repo(self, project, slug, new_name=None, forkable=None, public=None):
+    def update_repo(self, project, slug, description=None, new_name=None, forkable=None, public=None):
         """Update the repo's settings.
 
         Args:
             project: the project for the given repo
             slug: the given repo slug
+            description (Optional [str]): optional, update the repo description
             new_name (str): optional, set a new name for the repo
             forkable (bool): optional, set the forkable flag
             public (bool): optional, set the public flag
@@ -603,6 +606,8 @@ class BitbucketServer(object):
         uri = f'projects/{project}/repos/{slug}'
         payload = {}
         # Only modify attributes that we were asked to:
+        if description is not None:
+            payload['description'] = description
         if new_name is not None:
             payload['name'] = new_name
         if public is not None:

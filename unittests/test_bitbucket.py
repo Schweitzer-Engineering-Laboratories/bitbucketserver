@@ -331,6 +331,7 @@ class TestBitbucketServer(unittest.TestCase):
         args, kwargs = self.mock_session.post.call_args
         self.assertEqual(kwargs['json'], {'name': 'new_repo',
                                           'scmId': 'git',
+                                          'description': None,
                                           'forkable': True,
                                           'public': False})
         self.assertIn('target_proj', kwargs['url'])
@@ -2080,8 +2081,10 @@ class TestBitbucketServer(unittest.TestCase):
             ('repo', ['TEST', 'slug']),
             ('repo_by_id', [1234]),
             ('create_repo', ['TEST', 'Name']),
-            ('update_repo', ['TEST', 'slug', 'new name']),
-            ('update_repo', ['TEST', 'slug', 'new name', False, False]),
+            ('create_repo', ['TEST', 'Name', 'description']),
+            ('update_repo', ['TEST', 'slug', 'description', 'new name']),
+            ('update_repo', ['TEST', 'slug', None, 'new name']),
+            ('update_repo', ['TEST', 'slug', None, 'new name', False, False]),
             ('repo_git_lfs_status', ['TEST', 'slug']),
             ('enable_git_lfs_in_repo', ['TEST', 'slug']),
             ('disable_git_lfs_in_repo', ['TEST', 'slug']),
