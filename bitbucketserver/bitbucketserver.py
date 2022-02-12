@@ -1681,7 +1681,7 @@ class BitbucketServer(object):
         return self.conn.post(uri, json=branch_model)
 
     def commit_build_statuses(self, commit):
-        """
+        """Get a list of commit build statuses using old the endpoint.
 
         Args:
             commit (str): full SHA1 of the commit
@@ -1694,7 +1694,7 @@ class BitbucketServer(object):
         return [resources.BuildStatusResource(r, self) for r in self.conn.get_paged(uri, base=self.api_versions.build_status)]
 
     def post_build_status(self, commit, state, key, url, name=None, description=None):
-        """Associate a build status with a commit.
+        """Associate a build status with a commit using the old endpoint.
 
         Args:
             commit (str): full SHA1 of the commit
@@ -1719,6 +1719,75 @@ class BitbucketServer(object):
             content['description'] = description
         log.info("posting build status of '%s' to commit %s", state, commit)
         self.conn.post(uri, json=content, base=self.api_versions.build_status)
+        # returns no content
+
+    def post_build_status_new(self, project, slug, commit, build_json):
+        """Post a build status using the new endpoint.
+
+        Example:
+
+            {
+                "key": "TEST-REP123",
+                "state": "SUCCESSFUL",
+                "url": "https://bamboo.url/browse/TEST-REP1-3",
+                "buildNumber": "3",
+                "description": "Unit test build",
+                "duration": 1500000,
+                "lastUpdated": 1359075920,
+                "name": "Database Matrix Tests",
+                "parent": "TEST-REP",
+                "ref": "refs/heads/master",
+                "testResults": {
+                    "failed": 1,
+                    "skipped": 8,
+                    "successful": 0
+                }
+            }
+
+        Args:
+            project (str): the project key
+            slug (str): the repo slug
+            commit (str): full SHA1 of the commit
+            build_json (dict): build info dictionary
+        """
+        uri = f'projects/{project}/repos/{slug}/commits/{commit}/builds'
+        self.conn.post(uri, json=build_json)
+        # returns no content
+
+    def commit_build_status(self, project, slug, commit, key):
+        """Get a specific build status.
+
+        Args:
+            project ([type]): [description]
+            slug ([type]): [description]
+            commit ([type]): [description]
+            key ([type]): [description]
+
+        Returns:
+            resources.BuildStatusResource
+        """
+        uri = f'projects/{project}/repos/{slug}/commits/{commit}/builds'
+        params = {
+            'key': key
+        }
+        return resources.BuildStatusResource(self.conn.get(uri, parameters=params))
+
+    def delete_commit_build_status(self, project, slug, commit, key):
+        """Delete the specified build result.
+        Note: this only works for build statuses created with the newer
+        endpoint. BB always returns 204 regardless of if it deleted anything.
+
+        Args:
+            project (str): the project key
+            slug (str): the repo slug
+            commit (str): full SHA1 of the commit
+            key (str): the key for the build
+        """
+        uri = f'projects/{project}/repos/{slug}/commits/{commit}/builds'
+        params = {
+            'key': key
+        }
+        self.conn.delete(uri, parameters=params)
         # returns no content
 
     def commit_build_statistics(self, commit, includeunique=False):
