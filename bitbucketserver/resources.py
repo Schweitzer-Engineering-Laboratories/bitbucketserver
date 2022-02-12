@@ -280,11 +280,6 @@ class BranchResource(BaseRefResourceObject):
     # TODO: PR fetching related things
 
 
-class BuildStatisticResource(BitbucketObject):
-    """Bitbucket Server build statistics resource."""
-    pass
-
-
 class BuildStatusResource(BitbucketObject):
     """Bitbucket Server build status resource."""
 

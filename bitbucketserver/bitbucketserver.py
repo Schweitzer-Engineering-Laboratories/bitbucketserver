@@ -1798,7 +1798,7 @@ class BitbucketServer(object):
             includeunique (optional bool): include unique build info
                 If there is only one of any given type of build, include its info.
         Returns:
-            BuildStatisticResource
+            dict
         """
         uri = f'commits/stats/{commit}'
         params = {}
@@ -1811,7 +1811,7 @@ class BitbucketServer(object):
                 results.append(resources.BuildStatusResource(r))
         stats['results'] = results
         log.info("getting build statistics for commit: %s", commit)
-        return resources.BuildStatisticResource(stats, self)
+        return stats
 
     def issue_commits(self, issue_key):
         """Get commits that are associated with the given issue key.
