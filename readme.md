@@ -11,7 +11,7 @@ A simple wrapper for the Atlassian's Bitbucket Server / Bitbucket Datacenter (fo
 import bitbucketserver
 bb = bitbucketserver.BitbucketServer(
     url="http://mybitbucket.company.com",
-    basic_auth=('username', 'password))
+    basic_auth=('username', 'password'))
 ```
 
 #### Personal Tokens:
