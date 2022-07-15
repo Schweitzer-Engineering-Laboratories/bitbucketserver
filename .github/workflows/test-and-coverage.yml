@@ -27,6 +27,7 @@ jobs:
       - name: Run unittest and Generate Coverage Badge
         if: success()
         run: |
+          mkdir output
           coverage run --source=./bitbucketserver -m unittest discover .
           coverage-badge -o output/coverage.svg
 
