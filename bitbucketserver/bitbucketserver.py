@@ -2134,6 +2134,7 @@ class BitbucketServer(object):
 
         """
         uri = f'projects/{project}/repos/{slug}/pull-requests/{request_id}/comments'
+        params = None
         if path is not None:
             params = {
                 'path': path,
