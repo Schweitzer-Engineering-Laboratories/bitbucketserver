@@ -2119,6 +2119,26 @@ class BitbucketServer(object):
             'path': path,
         }
         return self.conn.get_paged(uri, parameters=params)
+    
+    def add_pull_request_comment(self, project, slug, request_id, text, path=None):
+        """Add a comment to a given pull request with an optional filepath.
+
+        Args:
+            project (str): the project key
+            slug (str): the repo slug
+            request_id (int): the pull request ID#
+            text (str): comment message text
+            path (str): path and filename that exists in the PR.
+        
+        Returns:
+
+        """
+        uri = f'projects/{project}/repos/{slug}/pull-requests/{request_id}/comments'
+        if path is not None:
+            params = {
+                'path': path,
+            }
+        return self.conn.post(uri, parameters=params, json={"text": text})
 
     def pull_request_diffs(self, project, slug, request_id, path=None,
             context_lines=None, diff_type=None, since_id=None, until_id=None,
