@@ -1,7 +1,7 @@
 # Bitbucket Server API Wrapper
 A simple wrapper for the Atlassian's Bitbucket Server / Bitbucket Datacenter (formerly Stash) REST API, written in Python.
 
-[![Test](https://github.com/JoeStanleySEL/bitbucketserver/actions/workflows/test-and-cover.yml/badge.svg?branch=master)](https://github.com/JoeStanleySEL/bitbucketserver/actions/workflows/test-and-cover.yml)
+[![Test](https://github.com/JoeStanleySEL/bitbucketserver/actions/workflows/test-and-coverage.yml/badge.svg?branch=master)](https://github.com/JoeStanleySEL/bitbucketserver/actions/workflows/test-and-coverage.yml)
 ![Coverage](https://raw.githubusercontent.com/JoeStanleySEL/bitbucketserver/coverage-badge/coverage.svg)
 
 ## Usage
