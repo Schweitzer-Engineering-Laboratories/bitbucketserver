@@ -7,24 +7,30 @@ A simple wrapper for the Atlassian's Bitbucket Server / Bitbucket Datacenter (fo
 
 #### Basic Auth:
 
-    import bitbucketserver
-    bb = bitbucketserver.BitbucketServer(
-        url="http://mybitbucket.company.com",
-        basic_auth=('username', 'password))
+```python
+import bitbucketserver
+bb = bitbucketserver.BitbucketServer(
+    url="http://mybitbucket.company.com",
+    basic_auth=('username', 'password'))
+```
 
 #### Personal Tokens:
 
-    bb = bitbucketserver.BitbucketServer(
-        url="http://mybitbucket.company.com",
-        bearer_token="...")
+```python
+bb = bitbucketserver.BitbucketServer(
+    url="http://mybitbucket.company.com",
+    bearer_token="...")
+```
 
 
 ### Examples
 
-    myrepo = bb.repo('project-key', 'my-repo')
-    commits = myrepo.commits()
-    new_repo = bb.create_new_repo('PROJ', "New Repo Name")
-    new_repo.set_group_permission("dev-team", "REPO_WRITE")
+```python
+myrepo = bb.repo('project-key', 'my-repo')
+commits = myrepo.commits()
+new_repo = bb.create_new_repo('PROJ', "New Repo Name")
+new_repo.set_group_permission("dev-team", "REPO_WRITE")
+```
 
 
 #### Object Internals
