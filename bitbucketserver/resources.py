@@ -134,14 +134,6 @@ class RepoContextBitbucketObject(ProjectContextBitbucketObject):
             self._repo = self.server.repo(self._parent_project_key, self._parent_slug)
         return self._repo
 
-    @property
-    def compound_key(self):
-        """The compound key of project key, repo slug.
-
-        Returns:
-            tuple: the project key, repo slug
-        """
-        return self._parent_project_key, self._parent_slug
 
 class BaseRefResourceObject(RepoContextBitbucketObject):
 
@@ -894,6 +886,51 @@ class PullRequestActivityResource(PullRequestContextBitbucketObject):
             self.action,
             self.id,
         )
+
+
+class PullRequestCommentResource(PullRequestContextBitbucketObject):
+
+    def __repr__(self):
+        return '<%s(comment=%s)>' % (
+            self.__class__.__name__,
+            self.id,
+        )
+
+    def __int__(self) -> int:
+        return int(self.id)
+
+    def __str__(self) -> str:
+        return self.text
+
+    @property
+    def body(self):
+        return self.text
+
+    @property
+    def is_task(self):
+        return self.severity == 'BLOCKER'
+
+    def reply(self, text, task=False):
+        """Reply to this comment.
+
+        Args:
+            text (str): comment message text
+
+        Returns:
+            resources.PullRequestCommentResource
+        """
+        return self._server.add_pull_request_comment(
+            project=self._parent_project_key,
+            slug=self._parent_slug,
+            request_id=self._pull_request_id,
+            text=text,
+            task=task,
+            parent_comment=self.id
+        )
+
+    def resolve(self):
+        if self.is_task:
+            return self._server.resolve_task(self.id)
 
 
 class RepositoryAuditResource(RepoContextBitbucketObject):

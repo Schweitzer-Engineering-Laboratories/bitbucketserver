@@ -2133,9 +2133,11 @@ class BitbucketServer(object):
             task (bool, optional): if the comment should be a Task. Defaults to False.
             parent_comment (int, optional): A parent comment to reply to.
             path (str): path and filename that exists in the PR.
-        
-        Returns:
+            line (int, optional): line number to anchor the comment to.
+                Leaving blank will be a full file comment.
 
+        Returns:
+            resources.PullRequestCommentResource
         """
         uri = f'projects/{project}/repos/{slug}/pull-requests/{request_id}/comments'
         params = None
@@ -2156,7 +2158,13 @@ class BitbucketServer(object):
             if line is not None:
                 body['anchor']['line'] = int(line)
                 body['anchor']['lineType'] = 'ADDED'
-        return self.conn.post(uri, parameters=params, json=body)
+        return resources.PullRequestCommentResource(
+            decode_json(self.conn.post(uri, parameters=params, json=body)),
+            self,
+            project=project,
+            slug=slug,
+            pr_id=request_id
+        )
 
     def pull_request_diffs(self, project, slug, request_id, path=None,
             context_lines=None, diff_type=None, since_id=None, until_id=None,
