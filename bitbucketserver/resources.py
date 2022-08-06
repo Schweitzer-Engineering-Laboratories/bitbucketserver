@@ -1410,7 +1410,7 @@ class TagResource(BaseRefResourceObject):
         self.server.delete_repo_tag(self._parent_project_key, self._parent_slug, self.id)
 
 
-class TaskResource(BitbucketObject):
+class TaskResource(PullRequestCommentResource):
     """A pull request Task resource."""
 
     def resolve(self):

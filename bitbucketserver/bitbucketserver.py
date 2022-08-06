@@ -91,6 +91,10 @@ class BitbucketServer(object):
         )
         try:
             self._server_info = self.server_info()
+            self._server_version = tuple(int(n) for n in (self._server_info['version'].split(".")))
+        except (ValueError, KeyError):
+            log.exception("error parsing server info")
+            raise
         except BitbucketServerException:
             raise
         except Exception:
@@ -2295,10 +2299,13 @@ class BitbucketServer(object):
         Returns:
             list: TaskResources
         """
-        uri = f'projects/{project}/repos/{slug}/pull-requests/{request_id}/tasks'
-        return [resources.TaskResource(r, self) for r in self.conn.get_paged(uri)]
-
-    # TODO: create_task()
+        if self._server_version > (7, 2):
+            uri = f'projects/{project}/repos/{slug}/pull-requests/{request_id}/blocker-comments'
+            res = resources.PullRequestCommentResource
+        else:
+            uri = f'projects/{project}/repos/{slug}/pull-requests/{request_id}/tasks'
+            res = resources.TaskResource
+        return [res(r, self, project, slug, request_id) for r in self.conn.get_paged(uri)]
 
     def task(self, task_id):
         """Get a task by ID.
@@ -2309,6 +2316,8 @@ class BitbucketServer(object):
         Returns:
             TaskResource
         """
+        if self._server_version >= (8, 0, 0):
+            raise DeprecationWarning("this endpoint is deprecated in 8.0, use 'pull_request_comment'")
         uri = f'tasks/{task_id}'
         return resources.TaskResource(self.conn.get(uri))
 
@@ -2321,6 +2330,8 @@ class BitbucketServer(object):
         Returns:
             TaskResource: the updated task
         """
+        if self._server_version >= (8, 0, 0):
+            raise DeprecationWarning("this endpoint is deprecated in 8.0, use 'update_pull_request_comment'")
         uri = f'tasks/{task_id}'
         return resources.TaskResource(decode_json(self.conn.put(uri, json={'state': 'RESOLVED'})), self)
 
@@ -2333,6 +2344,8 @@ class BitbucketServer(object):
         Returns:
             TaskResource: the updated task
         """
+        if self._server_version >= (8, 0, 0):
+            raise DeprecationWarning("this endpoint is deprecated in 8.0, use 'update_pull_request_comment'")
         uri = f'tasks/{task_id}'
         return resources.TaskResource(decode_json(self.conn.put(uri, json={'state': 'OPEN'})), self)
 
@@ -2345,6 +2358,8 @@ class BitbucketServer(object):
         Returns:
             None
         """
+        if self._server_version >= (8, 0, 0):
+            raise DeprecationWarning("this endpoint is deprecated in 8.0, use 'delete_pull_request_comment'")
         uri = f'tasks/{task_id}'
         self.conn.delete(uri)
 
@@ -2356,11 +2371,13 @@ class BitbucketServer(object):
         Args:
             task_id (int): the task ID
             text (optional string): the task's text to update
-            state (optional string): the state of the
+            state (optional string): the state of the task
 
         Returns:
             TaskResource: the updated task
         """
+        if self._server_version >= (8, 0, 0):
+            raise DeprecationWarning("this endpoint is deprecated in 8.0, use 'update_pull_request_comment'")
         uri = f'tasks/{task_id}'
         data = {}
         if text:
