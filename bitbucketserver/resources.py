@@ -905,11 +905,24 @@ class PullRequestCommentResource(PullRequestContextBitbucketObject):
     def is_task(self):
         return self.severity == 'BLOCKER'
 
+    @property
+    def is_resolved(self):
+        return self.state == 'RESOLVED'
+
+    @property
+    def comments(self):
+        return [PullRequestCommentResource(c, self._server, self._parent_project_key, self._parent_slug, self._pull_request_id) for c in self._raw.get('comments', [])]
+
+    @property
+    def child_comments(self):
+        return self.comments
+
     def reply(self, text, task=False):
         """Reply to this comment.
 
         Args:
             text (str): comment message text
+            task (bool): post as a Task/Blocker Comment
 
         Returns:
             resources.PullRequestCommentResource
@@ -925,7 +938,52 @@ class PullRequestCommentResource(PullRequestContextBitbucketObject):
 
     def resolve(self):
         if self.is_task:
-            return self._server.resolve_task(self.id)
+            self.update(resolved=True)
+
+    def reopen(self):
+        if self.is_task:
+            self.update(resolved=False)
+
+    def convert_to_task(self):
+        self.update(task=True)
+
+    def convert_to_comment(self):
+        self.update(task=False)
+
+    def update(self, text=None, task=None, resolved=None):
+        """Update this pull request comment.
+        If this object is out of date (due to the version number),
+        call .refresh() to re-fetch it and perform the update again.
+
+        Args:
+            text (str, optional): Update the body text of a comment.
+                Only the author may update the text. Defaults to None.
+            task (bool, optional): Convert the comment to or from a task.
+                True: converts the comment to a task (7.2+)
+                False: converts the comment from a task (7.2+)
+            resolved (bool, optional): Mark the Task/Blocker Comment as resolved or unresolved.
+                True: marks the Task as complete.
+                False: marks the Task as incomplete.
+        """
+        self._update(self._server.update_pull_request_comment(
+            project=self._parent_project_key,
+            slug=self._parent_slug,
+            request_id=self._pull_request_id,
+            comment_id=self.id,
+            version=self.version,
+            text=text,
+            task=task,
+            resolved=resolved,
+        ))
+
+    def refresh(self):
+        """Refresh this object with the server."""
+        self._update(self.server.pull_request_comment(
+            project=self._parent_project_key,
+            slug=self._parent_slug,
+            request_id=self._pull_request_id,
+            comment_id=self.id,
+        ))
 
 
 class RepositoryAuditResource(RepoContextBitbucketObject):

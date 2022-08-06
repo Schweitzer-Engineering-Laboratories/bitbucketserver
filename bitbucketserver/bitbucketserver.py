@@ -2191,11 +2191,32 @@ class BitbucketServer(object):
             'anchorState': anchor_state,
             'path': path,
         }
-        return self.conn.get_paged(uri, parameters=params)
+        return [resources.PullRequestCommentResource(r, self, project, slug, request_id) for r in self.conn.get_paged(uri, parameters=params)]
+
+    def pull_request_comment(self, project, slug, request_id, comment_id):
+        """Get a specific comment from a pull request.
+
+        Args:
+            project (str): the project key
+            slug (str): the repo slug
+            request_id (int): the pull request ID#
+            comment_id (int): the comment ID#
+
+        Returns:
+            resources.PullRequestCommentResource
+        """
+        uri = f'projects/{project}/repos/{slug}/pull-requests/{request_id}/comments/{comment_id}'
+        return resources.PullRequestCommentResource(
+            self.conn.get(uri),
+            self,
+            project=project,
+            slug=slug,
+            pr_id=request_id
+        )
 
     def add_pull_request_comment(self, project, slug, request_id, text,
-        task=False, parent_comment=None,
-        path=None, line=None):
+            task=False, parent_comment=None,
+            path=None, line=None):
         """Add a comment to a given pull request with an optional filepath.
 
         Args:
@@ -2238,6 +2259,77 @@ class BitbucketServer(object):
             slug=slug,
             pr_id=request_id
         )
+
+    def update_pull_request_comment(self, project, slug, request_id, comment_id, version,
+            text=None, task=None, resolved=None):
+        """Update the given pull request comment using its ID.
+
+        Args:
+            project (str): the project key
+            slug (str): the repo slug
+            request_id (int): the pull request ID#
+            comment_id (int): the comment ID#
+            version (int): the comment's current version.
+                This must be specified or BB will refuse to edit the comment.
+            text (str, optional): Update the body text of a comment.
+                Only the author may update the text. Defaults to None.
+            task (bool, optional): Convert the comment to or from a task.
+                True: converts the comment to a task (7.2+)
+                False: converts the comment from a task (7.2+)
+            resolved (bool, optional): Mark the Task/Blocker Comment as resolved or unresolved.
+                True: marks the Task as complete.
+                False: marks the Task as incomplete.
+
+        Raises:
+            BitbucketServerException: "You are attempting to modify a comment based on out-of-date information."
+                This occurs when you don't specify the correct version.
+        """
+        uri = f'projects/{project}/repos/{slug}/pull-requests/{request_id}/comments/{comment_id}'
+        body = {
+            'version': version
+        }
+        if text is not None:
+            body['text'] = text
+        if task is True:
+            body['severity'] = 'BLOCKER'
+        elif task is False:
+            body['severity'] = 'NORMAL'
+        if resolved is True:
+            body['state'] = 'RESOLVED'
+        elif resolved is False:
+            body['state'] = 'OPEN'
+        return resources.PullRequestCommentResource(
+            decode_json(self.conn.put(uri, json=body)),
+            self,
+            project=project,
+            slug=slug,
+            pr_id=request_id
+        )
+
+    def delete_pull_request_comment(self, project, slug, request_id, comment_id, version):
+        """Delete a pull request comment. Anyone can delete their own comment.
+        Only users with REPO_ADMIN and above may delete comments created by other users.
+
+        Args:
+            project (str): the project key
+            slug (str): the repo slug
+            request_id (int): the pull request ID#
+            comment_id (int): the comment ID#
+            version (int): the comment's current version.
+                This must be specified or BB will refuse to delete the comment.
+
+        Returns:
+            None
+
+        Raises:
+            BitbucketServerException: "You are attempting to modify a comment based on out-of-date information."
+                This occurs when you don't specify the correct version.
+        """
+        uri = f'projects/{project}/repos/{slug}/pull-requests/{request_id}/comments/{comment_id}'
+        body = {
+            'version': version
+        }
+        self.conn.delete(uri, json=body)
 
     def pull_request_diffs(self, project, slug, request_id, path=None,
             context_lines=None, diff_type=None, since_id=None, until_id=None,
