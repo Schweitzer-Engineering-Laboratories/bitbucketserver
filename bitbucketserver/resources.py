@@ -361,7 +361,7 @@ class CommitResource(BaseRefResourceObject):
                 If there is only one of any given type of build, include its info.
 
         Returns:
-            BuildStatisticResource
+            dict
         """
         return self.server.commit_build_statistics(self.id, includeunique=includeunique)
 

@@ -1685,7 +1685,7 @@ class BitbucketServer(object):
         return self.conn.post(uri, json=branch_model)
 
     def commit_build_statuses(self, commit):
-        """Get a list of commit build statuses using old the endpoint.
+        """Get a list of commit build statuses using the old endpoint.
 
         Args:
             commit (str): full SHA1 of the commit
@@ -2127,7 +2127,7 @@ class BitbucketServer(object):
         Args:
             project (str): the project key
             slug (str): the repo slug
-            request_id (int): the pull reuqest ID#
+            request_id (int): the pull request ID#
             from_id (optional int): the id of the activity item to use as the first item in the list
             from_type (optional str): the type of the activity item specified by from_id
                 Required if from_id is specified. Either COMMENT or ACTIVITY.
@@ -2144,12 +2144,12 @@ class BitbucketServer(object):
         return [resources.PullRequestActivityResource(r, self, project, slug, request_id) for r in self.conn.get_paged(uri, params)]
 
     def pull_request_changes(self, project, slug, request_id):
-        """
+        """Get Changes in a Pull Request.
 
         Args:
-            project:
-            slug:
-            request_id:
+            project (str): the project key
+            slug (str): the repo slug
+            request_id (int): the pull request ID#
 
         Returns:
             list: ChangesResources
@@ -2158,12 +2158,12 @@ class BitbucketServer(object):
         return [resources.ChangesResource(r, self, project, slug) for r in self.conn.get_paged(uri)]
 
     def pull_request_commits(self, project, slug, request_id):
-        """
+        """Get the list of Commits in a Pull Request.
 
         Args:
             project (str): the project key
             slug (str): the repo slug
-            request_id (int): the pull reuqest ID#
+            request_id (int): the pull request ID#
 
         Returns:
 
@@ -2486,7 +2486,7 @@ class BitbucketServer(object):
                 Defaults to currently logged in user
 
         Returns:
-
+            list: SSHKeyResource
         """
         uri = 'keys'
         params = {}
@@ -2835,7 +2835,7 @@ class BitbucketServer(object):
                 Should be a name associated with the source of the report,
                 e.g. the tool name or report type.
             insight_json (dict): the contents of the report
-                Must cotain the following values:
+                Must contain the following values:
                     title (str): the title of the insight report
                 Optional:
                     details (str): description of the report
