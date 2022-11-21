@@ -2140,6 +2140,25 @@ class BitbucketServer(object):
             }
         return self.conn.post(uri, parameters=params, json={"text": text})
 
+    def delete_pull_request_comment(self, project, slug, request_id, comment_id, comment_version):
+        """Delete a comment from a given pull request.
+
+        Args:
+            project (str): the project key
+            slug (str): the repo slug
+            request_id (int): the pull request ID#
+            comment_id (int): the comment ID#
+            comment_version (int): expected version of the comment
+
+        Returns:
+            None
+        """
+        uri = f'projects/{project}/repos/{slug}/pull-requests/{request_id}/comments/{comment_id}'
+        params = {
+            'version': comment_version,
+        }
+        self.conn.delete(uri, parameters=params)
+
     def pull_request_diffs(self, project, slug, request_id, path=None,
             context_lines=None, diff_type=None, since_id=None, until_id=None,
             src_path=None, ignore_whitespace=False, with_comments=None):
@@ -2203,7 +2222,25 @@ class BitbucketServer(object):
         uri = f'projects/{project}/repos/{slug}/pull-requests/{request_id}/tasks'
         return [resources.TaskResource(r, self) for r in self.conn.get_paged(uri)]
 
-    # TODO: create_task()
+    def create_task(self, anchor_id, text, anchor_type="COMMENT"):
+        """Create a new task associated with a particular comment.
+
+        Args:
+            anchor_id (int): comment ID# to associate
+            text: task message text
+            anchor_type: type of task to be generated
+        
+        Returns:
+            TaskResource: the generated task
+        """
+        task_data = {
+            "anchor": {
+                "id": anchor_id,
+                "type": anchor_type,
+            },
+            "text": text,
+        }
+        return resources.TaskResource(decode_json(self.conn.post("tasks", json=task_data)), self)
 
     def task(self, task_id):
         """Get a task by ID.
