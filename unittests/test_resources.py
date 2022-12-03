@@ -106,6 +106,14 @@ class ResourceCoverage(TestResourcesBase):
             (resources.ProjectResource, 'delete_user_permission', ['user']),
             (resources.ProjectResource, 'get_default_permission', ['PROJECT_READ']),
             (resources.ProjectResource, 'set_default_permission', ['PROJECT_READ', True]),
+            (resources.PullRequestCommentResource, 'reply', ['text']),
+            (resources.PullRequestCommentResource, 'reply', ['text', True]),
+            (resources.PullRequestCommentResource, 'resolve', []),
+            (resources.PullRequestCommentResource, 'reopen', []),
+            (resources.PullRequestCommentResource, 'convert_to_task', []),
+            (resources.PullRequestCommentResource, 'convert_to_comment', []),
+            (resources.PullRequestCommentResource, 'update', ['text', True, False]),
+            (resources.PullRequestCommentResource, 'refresh', []),
             (resources.PullRequestResource, 'tasks', []),
             (resources.PullRequestResource, 'approve', []),
             (resources.PullRequestResource, 'decline', []),
@@ -172,7 +180,6 @@ class ResourceCoverage(TestResourcesBase):
             (resources.UserResource, 'access_tokens', []),
             (resources.UserAccessToken, 'update', ['token name']),
             (resources.UserAccessToken, 'delete', []),
-
             (resources.CodeInsightReport, 'add_annotations', [{'key': "value"}]),
             (resources.CodeInsightReport, 'delete_annotations', []),
             (resources.CodeInsightReport, 'delete', []),
@@ -192,6 +199,7 @@ class ResourceCoverage(TestResourcesBase):
                     'reviewers': [], 'version': 'na', 'slug': 'theslug',
                     'project': {'key': 'KEY'}, 'user': {'slug': "~user"},
                     'title': "Some Title", 'label': 'something',
+                    'severity': "BLOCKER",
                     'text': "text for PR comments/tasks"
                 }
                 testobj = testclass(self.bb_objectify(resource_dict), self.bb)
@@ -291,6 +299,10 @@ class ResourceCoverage(TestResourcesBase):
             (resources.CommitResource, 'commit'),
             (resources.HookResource, 'name'),
             (resources.HookResource, 'key'),
+            (resources.PullRequestCommentResource, 'body'),
+            (resources.PullRequestCommentResource, 'is_resolved'),
+            (resources.PullRequestCommentResource, 'comments'),
+            (resources.PullRequestCommentResource, 'child_comments'),
             (resources.ParticipantResource, 'is_author'),
             (resources.ParticipantResource, 'is_reviewer'),
             (resources.PullRequestResource, 'url'),
@@ -326,7 +338,8 @@ class ResourceCoverage(TestResourcesBase):
                     "links": {"self": [{"href": "http://...."}], "clone": [
                         {'name': "ssh", 'href': "ssh://..."}
                     ]},
-                    "project": {'key': "KEY"}, 'token': "..."
+                    "project": {'key': "KEY"}, 'token': "...",
+                    "text": "Comment Body",
                 }
                 testobj = testclass(self.bb_objectify(resource_dict), self.bb)
                 if hasattr(testobj, '_parent_slug'):
