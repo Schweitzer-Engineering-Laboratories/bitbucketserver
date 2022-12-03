@@ -338,7 +338,7 @@ class CommitResource(BaseRefResourceObject):
         """
         return self.server.commit_build_statuses(self.id)
 
-    def add_build(self, state, key, url, name=None, description=None):
+    def add_build_legacy(self, state, key, url, name=None, description=None):
         """Add a build status to this commit.
 
         Args:
@@ -351,7 +351,19 @@ class CommitResource(BaseRefResourceObject):
         Returns:
             None
         """
-        self.server.post_build_status(self.id, state, key, url, name=name, description=description)
+        self.server.post_build_status_legacy(self.id, state, key, url, name=name, description=description)
+
+    def add_build(self, build_json):
+        """Post a build status using the new endpoint.
+
+        Args:
+            build_json (dict): build info dictionary
+        """
+        self.server.post_build_status(
+            self._parent_project_key,
+            self._parent_slug,
+            self.id,
+            build_json)
 
     def build_statistics(self, includeunique=False):
         """Get build statistics for this commit.

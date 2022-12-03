@@ -1697,8 +1697,9 @@ class BitbucketServer(object):
         uri = f'commits/{commit}'
         return [resources.BuildStatusResource(r, self) for r in self.conn.get_paged(uri, base=self.api_versions.build_status)]
 
-    def post_build_status(self, commit, state, key, url, name=None, description=None):
+    def post_build_status_legacy(self, commit, state, key, url, name=None, description=None):
         """Associate a build status with a commit using the old endpoint.
+        This endpoint doesn't require permissions, but results also cannot be deleted.
 
         Args:
             commit (str): full SHA1 of the commit
@@ -1725,7 +1726,7 @@ class BitbucketServer(object):
         self.conn.post(uri, json=content, base=self.api_versions.build_status)
         # returns no content
 
-    def post_build_status_new(self, project, slug, commit, build_json):
+    def post_build_status(self, project, slug, commit, build_json):
         """Post a build status using the new endpoint.
 
         Example:
@@ -1762,10 +1763,10 @@ class BitbucketServer(object):
         """Get a specific build status.
 
         Args:
-            project ([type]): [description]
-            slug ([type]): [description]
-            commit ([type]): [description]
-            key ([type]): [description]
+            project (str): the project key
+            slug (str): the repo slug
+            commit (str): full SHA1 of the commit
+            key (str): the specific key for the build
 
         Returns:
             resources.BuildStatusResource
