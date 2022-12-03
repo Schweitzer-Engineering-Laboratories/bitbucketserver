@@ -2385,9 +2385,9 @@ class BitbucketServer(object):
         """Get the tasks associated with a pull request.
 
         Args:
-            project:
-            slug:
-            request_id:
+            project (str): the project key
+            slug (str): the repo slug
+            request_id (int): the pull request ID#
 
         Returns:
             list: TaskResources
@@ -2867,8 +2867,11 @@ class BitbucketServer(object):
                         "type": "DURATION"
                     },
                     {
-                        "title": "Download link",
-                        "value": "http://example.com/path/to/download",
+                        "title": "Additional Link",
+                        "value": {
+                            "linktext": "Click here",
+                            "href": "http://example.com/path/to/download"
+                        },
                         "type": "LINK"
                     },
                     {
