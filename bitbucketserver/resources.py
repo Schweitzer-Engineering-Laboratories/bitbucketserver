@@ -134,14 +134,6 @@ class RepoContextBitbucketObject(ProjectContextBitbucketObject):
             self._repo = self.server.repo(self._parent_project_key, self._parent_slug)
         return self._repo
 
-    @property
-    def compound_key(self):
-        """The compound key of project key, repo slug.
-
-        Returns:
-            tuple: the project key, repo slug
-        """
-        return self._parent_project_key, self._parent_slug
 
 class BaseRefResourceObject(RepoContextBitbucketObject):
 
@@ -288,11 +280,6 @@ class BranchResource(BaseRefResourceObject):
     # TODO: PR fetching related things
 
 
-class BuildStatisticResource(BitbucketObject):
-    """Bitbucket Server build statistics resource."""
-    pass
-
-
 class BuildStatusResource(BitbucketObject):
     """Bitbucket Server build status resource."""
 
@@ -351,7 +338,7 @@ class CommitResource(BaseRefResourceObject):
         """
         return self.server.commit_build_statuses(self.id)
 
-    def add_build(self, state, key, url, name=None, description=None):
+    def add_build_legacy(self, state, key, url, name=None, description=None):
         """Add a build status to this commit.
 
         Args:
@@ -364,7 +351,19 @@ class CommitResource(BaseRefResourceObject):
         Returns:
             None
         """
-        self.server.post_build_status(self.id, state, key, url, name=name, description=description)
+        self.server.post_build_status_legacy(self.id, state, key, url, name=name, description=description)
+
+    def add_build(self, build_json):
+        """Post a build status using the new endpoint.
+
+        Args:
+            build_json (dict): build info dictionary
+        """
+        self.server.post_build_status(
+            self._parent_project_key,
+            self._parent_slug,
+            self.id,
+            build_json)
 
     def build_statistics(self, includeunique=False):
         """Get build statistics for this commit.
@@ -374,7 +373,7 @@ class CommitResource(BaseRefResourceObject):
                 If there is only one of any given type of build, include its info.
 
         Returns:
-            BuildStatisticResource
+            dict
         """
         return self.server.commit_build_statistics(self.id, includeunique=includeunique)
 
@@ -896,6 +895,109 @@ class PullRequestActivityResource(PullRequestContextBitbucketObject):
         )
 
 
+class PullRequestCommentResource(PullRequestContextBitbucketObject):
+
+    def __repr__(self):
+        return '<%s(comment=%s)>' % (
+            self.__class__.__name__,
+            self.id,
+        )
+
+    def __int__(self) -> int:
+        return int(self.id)
+
+    def __str__(self) -> str:
+        return self.text
+
+    @property
+    def body(self):
+        return self.text
+
+    @property
+    def is_task(self):
+        return self.severity == 'BLOCKER'
+
+    @property
+    def is_resolved(self):
+        return self.state == 'RESOLVED'
+
+    @property
+    def comments(self):
+        return [PullRequestCommentResource(c, self._server, self._parent_project_key, self._parent_slug, self._pull_request_id) for c in self._raw.get('comments', [])]
+
+    @property
+    def child_comments(self):
+        return self.comments
+
+    def reply(self, text, task=False):
+        """Reply to this comment.
+
+        Args:
+            text (str): comment message text
+            task (bool): post as a Task/Blocker Comment
+
+        Returns:
+            resources.PullRequestCommentResource
+        """
+        return self._server.add_pull_request_comment(
+            project=self._parent_project_key,
+            slug=self._parent_slug,
+            request_id=self._pull_request_id,
+            text=text,
+            task=task,
+            parent_comment=self.id
+        )
+
+    def resolve(self):
+        if self.is_task:
+            self.update(resolved=True)
+
+    def reopen(self):
+        if self.is_task:
+            self.update(resolved=False)
+
+    def convert_to_task(self):
+        self.update(task=True)
+
+    def convert_to_comment(self):
+        self.update(task=False)
+
+    def update(self, text=None, task=None, resolved=None):
+        """Update this pull request comment.
+        If this object is out of date (due to the version number),
+        call .refresh() to re-fetch it and perform the update again.
+
+        Args:
+            text (str, optional): Update the body text of a comment.
+                Only the author may update the text. Defaults to None.
+            task (bool, optional): Convert the comment to or from a task.
+                True: converts the comment to a task (7.2+)
+                False: converts the comment from a task (7.2+)
+            resolved (bool, optional): Mark the Task/Blocker Comment as resolved or unresolved.
+                True: marks the Task as complete.
+                False: marks the Task as incomplete.
+        """
+        self._update(self._server.update_pull_request_comment(
+            project=self._parent_project_key,
+            slug=self._parent_slug,
+            request_id=self._pull_request_id,
+            comment_id=self.id,
+            version=self.version,
+            text=text,
+            task=task,
+            resolved=resolved,
+        ))
+
+    def refresh(self):
+        """Refresh this object with the server."""
+        self._update(self.server.pull_request_comment(
+            project=self._parent_project_key,
+            slug=self._parent_slug,
+            request_id=self._pull_request_id,
+            comment_id=self.id,
+        ))
+
+
 class RepositoryAuditResource(RepoContextBitbucketObject):
     """Bitbucket Server Audit resource object"""
 
@@ -1378,7 +1480,7 @@ class TagResource(BaseRefResourceObject):
         self.server.delete_repo_tag(self._parent_project_key, self._parent_slug, self.id)
 
 
-class TaskResource(BitbucketObject):
+class TaskResource(PullRequestCommentResource):
     """A pull request Task resource."""
 
     def resolve(self):
