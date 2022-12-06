@@ -7,7 +7,7 @@ Install script for installing the BitbucketServer API wrapper.
 
 """
 from setuptools import setup, find_packages
-VERSION = '1.1.0' # also located in bitbucketserver/__init__.py
+VERSION = '1.2.0' # also located in bitbucketserver/__init__.py
 
 REQUIRED_PACKAGES = ['requests>=2.4.2']
 TEST_PACKAGES = ['unittest']
