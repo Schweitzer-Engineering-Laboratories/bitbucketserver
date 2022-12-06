@@ -73,7 +73,8 @@ class ResourceCoverage(TestResourcesBase):
             (resources.BranchResource, 'set_as_default_branch', []),
             (resources.CommitResource, 'branches', []),
             (resources.CommitResource, 'build_statuses', []),
-            (resources.CommitResource, 'add_build', ['state', 'key', 'url']),
+            (resources.CommitResource, 'add_build_legacy', ['state', 'key', 'url']),
+            (resources.CommitResource, 'add_build', [dict()]),
             (resources.CommitResource, 'build_statistics', []),
             (resources.CommitResource, 'changes', []),
             (resources.CommitResource, 'changes_since', ['since']),
@@ -105,6 +106,14 @@ class ResourceCoverage(TestResourcesBase):
             (resources.ProjectResource, 'delete_user_permission', ['user']),
             (resources.ProjectResource, 'get_default_permission', ['PROJECT_READ']),
             (resources.ProjectResource, 'set_default_permission', ['PROJECT_READ', True]),
+            (resources.PullRequestCommentResource, 'reply', ['text']),
+            (resources.PullRequestCommentResource, 'reply', ['text', True]),
+            (resources.PullRequestCommentResource, 'resolve', []),
+            (resources.PullRequestCommentResource, 'reopen', []),
+            (resources.PullRequestCommentResource, 'convert_to_task', []),
+            (resources.PullRequestCommentResource, 'convert_to_comment', []),
+            (resources.PullRequestCommentResource, 'update', ['text', True, False]),
+            (resources.PullRequestCommentResource, 'refresh', []),
             (resources.PullRequestResource, 'tasks', []),
             (resources.PullRequestResource, 'approve', []),
             (resources.PullRequestResource, 'decline', []),
@@ -165,14 +174,12 @@ class ResourceCoverage(TestResourcesBase):
             (resources.TaskResource, 'delete', []),
             (resources.TaskResource, 'open', []),
             (resources.TaskResource, 'update', ['new text']),
-
             (resources.UserResource, 'repos', []),
             (resources.UserResource, 'ssh_keys', []),
             (resources.UserResource, 'add_ssh_key', ['sshkey']),
             (resources.UserResource, 'access_tokens', []),
             (resources.UserAccessToken, 'update', ['token name']),
             (resources.UserAccessToken, 'delete', []),
-
             (resources.CodeInsightReport, 'add_annotations', [{'key': "value"}]),
             (resources.CodeInsightReport, 'delete_annotations', []),
             (resources.CodeInsightReport, 'delete', []),
@@ -191,7 +198,9 @@ class ResourceCoverage(TestResourcesBase):
                     'details': {'key': 'TEST'}, 'key': "KEY", "name": "A name",
                     'reviewers': [], 'version': 'na', 'slug': 'theslug',
                     'project': {'key': 'KEY'}, 'user': {'slug': "~user"},
-                    'title': "Some Title", 'label': 'something'
+                    'title': "Some Title", 'label': 'something',
+                    'severity': "BLOCKER",
+                    'text': "text for PR comments/tasks"
                 }
                 testobj = testclass(self.bb_objectify(resource_dict), self.bb)
                 if hasattr(testobj, '_parent_slug'):
@@ -220,7 +229,6 @@ class ResourceCoverage(TestResourcesBase):
             (resources.RepoContextBitbucketObject, {}),
             (resources.BaseRefResourceObject, {"id": "deadbeef"}),
             (resources.BranchResource, {"id": "deadbeef"}),
-            (resources.BuildStatisticResource, {}),
             (resources.BuildStatusResource, {"key": "KEY", "state": "MERGED"}),
             (resources.ChangesResource, {"path": {"toString": "/a/path"}}),
             (resources.CommitResource, {"id": "deadbeef"}),
@@ -232,12 +240,13 @@ class ResourceCoverage(TestResourcesBase):
             (resources.PullRequestResource, {'id': 123, 'reviewers': []}),
             (resources.PullRequestContextBitbucketObject, {'id': 123}),
             (resources.PullRequestActivityResource, {'id': 123, 'action': 'COMMENT'}),
+            (resources.PullRequestCommentResource, {"id": 123, 'text': 'text'}),
             (resources.RepositoryAuditResource, {}),
             (resources.RepositoryResource, {"slug": "name", "project": {'key': "KEY"}, 'id': 123}),
             (resources.SettingsResource, {}),
             (resources.SSHKeyResource, {"label": "label"}),
             (resources.TagResource, {"id": "ref/heads/tag"}),
-            (resources.TaskResource, {"id": 123}),
+            (resources.TaskResource, {"id": 123, 'text': 'text'}),
             (resources.UserResource, {"slug": "username"}),
             (resources.UserAccessToken, {'id': 123, 'name': 'name'}),
             (resources.CodeInsightReport, {'key': 'somekey', 'title': 'title'}),
@@ -281,7 +290,6 @@ class ResourceCoverage(TestResourcesBase):
             (resources.ProjectResource, 'url'),
             (resources.ProjectContextBitbucketObject, 'project'),
             (resources.RepoContextBitbucketObject, 'repo'),
-            (resources.RepoContextBitbucketObject, 'compound_key'),
             (resources.BaseRefResourceObject, 'commit'),
             (resources.BaseRefResourceObject, 'name'),
             (resources.BuildStatusResource, 'passed'),
@@ -291,6 +299,10 @@ class ResourceCoverage(TestResourcesBase):
             (resources.CommitResource, 'commit'),
             (resources.HookResource, 'name'),
             (resources.HookResource, 'key'),
+            (resources.PullRequestCommentResource, 'body'),
+            (resources.PullRequestCommentResource, 'is_resolved'),
+            (resources.PullRequestCommentResource, 'comments'),
+            (resources.PullRequestCommentResource, 'child_comments'),
             (resources.ParticipantResource, 'is_author'),
             (resources.ParticipantResource, 'is_reviewer'),
             (resources.PullRequestResource, 'url'),
@@ -302,7 +314,6 @@ class ResourceCoverage(TestResourcesBase):
             (resources.PullRequestResource, 'closedDate'),
             (resources.PullRequestResource, 'updatedDate'),
             (resources.PullRequestResource, 'can_merge'),
-
             (resources.RepositoryResource, 'compound_key'),
             (resources.RepositoryResource, 'ssh_url'),
             (resources.RepositoryResource, 'url'),
@@ -311,8 +322,6 @@ class ResourceCoverage(TestResourcesBase):
             (resources.UserAccessToken, 'token'),
             (resources.CodeInsightReport, 'report_key'),
             (resources.CodeInsightReport, 'data'),
-
-
         ]
         for testclass, attr_name in cases:
             with self.subTest(f"{testclass}.{attr_name})"):
@@ -329,7 +338,8 @@ class ResourceCoverage(TestResourcesBase):
                     "links": {"self": [{"href": "http://...."}], "clone": [
                         {'name': "ssh", 'href': "ssh://..."}
                     ]},
-                    "project": {'key': "KEY"}, 'token': "..."
+                    "project": {'key': "KEY"}, 'token': "...",
+                    "text": "Comment Body",
                 }
                 testobj = testclass(self.bb_objectify(resource_dict), self.bb)
                 if hasattr(testobj, '_parent_slug'):

@@ -91,6 +91,10 @@ class BitbucketServer(object):
         )
         try:
             self._server_info = self.server_info()
+            self._server_version = tuple(int(n) for n in (self._server_info['version'].split(".")))
+        except (ValueError, KeyError):
+            log.exception("error parsing server info")
+            raise
         except BitbucketServerException:
             raise
         except Exception:
@@ -1681,7 +1685,7 @@ class BitbucketServer(object):
         return self.conn.post(uri, json=branch_model)
 
     def commit_build_statuses(self, commit):
-        """
+        """Get a list of commit build statuses using the old endpoint.
 
         Args:
             commit (str): full SHA1 of the commit
@@ -1693,8 +1697,9 @@ class BitbucketServer(object):
         uri = f'commits/{commit}'
         return [resources.BuildStatusResource(r, self) for r in self.conn.get_paged(uri, base=self.api_versions.build_status)]
 
-    def post_build_status(self, commit, state, key, url, name=None, description=None):
-        """Associate a build status with a commit.
+    def post_build_status_legacy(self, commit, state, key, url, name=None, description=None):
+        """Associate a build status with a commit using the old endpoint.
+        This endpoint doesn't require permissions, but results also cannot be deleted.
 
         Args:
             commit (str): full SHA1 of the commit
@@ -1721,6 +1726,75 @@ class BitbucketServer(object):
         self.conn.post(uri, json=content, base=self.api_versions.build_status)
         # returns no content
 
+    def post_build_status(self, project, slug, commit, build_json):
+        """Post a build status using the new endpoint.
+
+        Example:
+
+            {
+                "key": "TEST-REP123",
+                "state": "SUCCESSFUL",
+                "url": "https://bamboo.url/browse/TEST-REP1-3",
+                "buildNumber": "3",
+                "description": "Unit test build",
+                "duration": 1500000,
+                "lastUpdated": 1359075920,
+                "name": "Database Matrix Tests",
+                "parent": "TEST-REP",
+                "ref": "refs/heads/master",
+                "testResults": {
+                    "failed": 1,
+                    "skipped": 8,
+                    "successful": 0
+                }
+            }
+
+        Args:
+            project (str): the project key
+            slug (str): the repo slug
+            commit (str): full SHA1 of the commit
+            build_json (dict): build info dictionary
+        """
+        uri = f'projects/{project}/repos/{slug}/commits/{commit}/builds'
+        self.conn.post(uri, json=build_json)
+        # returns no content
+
+    def commit_build_status(self, project, slug, commit, key):
+        """Get a specific build status.
+
+        Args:
+            project (str): the project key
+            slug (str): the repo slug
+            commit (str): full SHA1 of the commit
+            key (str): the specific key for the build
+
+        Returns:
+            resources.BuildStatusResource
+        """
+        uri = f'projects/{project}/repos/{slug}/commits/{commit}/builds'
+        params = {
+            'key': key
+        }
+        return resources.BuildStatusResource(self.conn.get(uri, parameters=params))
+
+    def delete_commit_build_status(self, project, slug, commit, key):
+        """Delete the specified build result.
+        Note: this only works for build statuses created with the newer
+        endpoint. BB always returns 204 regardless of if it deleted anything.
+
+        Args:
+            project (str): the project key
+            slug (str): the repo slug
+            commit (str): full SHA1 of the commit
+            key (str): the key for the build
+        """
+        uri = f'projects/{project}/repos/{slug}/commits/{commit}/builds'
+        params = {
+            'key': key
+        }
+        self.conn.delete(uri, parameters=params)
+        # returns no content
+
     def commit_build_statistics(self, commit, includeunique=False):
         """Gets statistics regarding the builds associated with a commit.
 
@@ -1729,7 +1803,7 @@ class BitbucketServer(object):
             includeunique (optional bool): include unique build info
                 If there is only one of any given type of build, include its info.
         Returns:
-            BuildStatisticResource
+            dict
         """
         uri = f'commits/stats/{commit}'
         params = {}
@@ -1742,7 +1816,7 @@ class BitbucketServer(object):
                 results.append(resources.BuildStatusResource(r))
         stats['results'] = results
         log.info("getting build statistics for commit: %s", commit)
-        return resources.BuildStatisticResource(stats, self)
+        return stats
 
     def issue_commits(self, issue_key):
         """Get commits that are associated with the given issue key.
@@ -2054,7 +2128,7 @@ class BitbucketServer(object):
         Args:
             project (str): the project key
             slug (str): the repo slug
-            request_id (int): the pull reuqest ID#
+            request_id (int): the pull request ID#
             from_id (optional int): the id of the activity item to use as the first item in the list
             from_type (optional str): the type of the activity item specified by from_id
                 Required if from_id is specified. Either COMMENT or ACTIVITY.
@@ -2071,12 +2145,12 @@ class BitbucketServer(object):
         return [resources.PullRequestActivityResource(r, self, project, slug, request_id) for r in self.conn.get_paged(uri, params)]
 
     def pull_request_changes(self, project, slug, request_id):
-        """
+        """Get Changes in a Pull Request.
 
         Args:
-            project:
-            slug:
-            request_id:
+            project (str): the project key
+            slug (str): the repo slug
+            request_id (int): the pull request ID#
 
         Returns:
             list: ChangesResources
@@ -2085,12 +2159,12 @@ class BitbucketServer(object):
         return [resources.ChangesResource(r, self, project, slug) for r in self.conn.get_paged(uri)]
 
     def pull_request_commits(self, project, slug, request_id):
-        """
+        """Get the list of Commits in a Pull Request.
 
         Args:
             project (str): the project key
             slug (str): the repo slug
-            request_id (int): the pull reuqest ID#
+            request_id (int): the pull request ID#
 
         Returns:
 
@@ -2118,7 +2192,145 @@ class BitbucketServer(object):
             'anchorState': anchor_state,
             'path': path,
         }
-        return self.conn.get_paged(uri, parameters=params)
+        return [resources.PullRequestCommentResource(r, self, project, slug, request_id) for r in self.conn.get_paged(uri, parameters=params)]
+
+    def pull_request_comment(self, project, slug, request_id, comment_id):
+        """Get a specific comment from a pull request.
+
+        Args:
+            project (str): the project key
+            slug (str): the repo slug
+            request_id (int): the pull request ID#
+            comment_id (int): the comment ID#
+
+        Returns:
+            resources.PullRequestCommentResource
+        """
+        uri = f'projects/{project}/repos/{slug}/pull-requests/{request_id}/comments/{comment_id}'
+        return resources.PullRequestCommentResource(
+            self.conn.get(uri),
+            self,
+            project=project,
+            slug=slug,
+            pr_id=request_id
+        )
+
+    def add_pull_request_comment(self, project, slug, request_id, text,
+            task=False, parent_comment=None,
+            path=None, line=None):
+        """Add a comment to a given pull request with an optional filepath.
+
+        Args:
+            project (str): the project key
+            slug (str): the repo slug
+            request_id (int): the pull request ID#
+            text (str): comment message text
+            task (bool, optional): if the comment should be a Task. Defaults to False.
+            parent_comment (int, optional): A parent comment to reply to.
+            path (str): path and filename that exists in the PR.
+            line (int, optional): line number to anchor the comment to.
+                Leaving blank will be a full file comment.
+
+        Returns:
+            resources.PullRequestCommentResource
+        """
+        uri = f'projects/{project}/repos/{slug}/pull-requests/{request_id}/comments'
+        params = None
+        body = {
+            'text': text,
+            'severity': 'NORMAL',
+        }
+        if task is True:
+            body['severity'] = 'BLOCKER'
+        if parent_comment is not None:
+            body['parent'] = {
+                "id": int(parent_comment)
+            }
+        elif path is not None:
+            body['anchor'] = {
+                'path': path
+            }
+            if line is not None:
+                body['anchor']['line'] = int(line)
+                body['anchor']['lineType'] = 'ADDED'
+        return resources.PullRequestCommentResource(
+            decode_json(self.conn.post(uri, parameters=params, json=body)),
+            self,
+            project=project,
+            slug=slug,
+            pr_id=request_id
+        )
+
+    def update_pull_request_comment(self, project, slug, request_id, comment_id, version,
+            text=None, task=None, resolved=None):
+        """Update the given pull request comment using its ID.
+
+        Args:
+            project (str): the project key
+            slug (str): the repo slug
+            request_id (int): the pull request ID#
+            comment_id (int): the comment ID#
+            version (int): the comment's current version.
+                This must be specified or BB will refuse to edit the comment.
+            text (str, optional): Update the body text of a comment.
+                Only the author may update the text. Defaults to None.
+            task (bool, optional): Convert the comment to or from a task.
+                True: converts the comment to a task (7.2+)
+                False: converts the comment from a task (7.2+)
+            resolved (bool, optional): Mark the Task/Blocker Comment as resolved or unresolved.
+                True: marks the Task as complete.
+                False: marks the Task as incomplete.
+
+        Raises:
+            BitbucketServerException: "You are attempting to modify a comment based on out-of-date information."
+                This occurs when you don't specify the correct version.
+        """
+        uri = f'projects/{project}/repos/{slug}/pull-requests/{request_id}/comments/{comment_id}'
+        body = {
+            'version': version
+        }
+        if text is not None:
+            body['text'] = text
+        if task is True:
+            body['severity'] = 'BLOCKER'
+        elif task is False:
+            body['severity'] = 'NORMAL'
+        if resolved is True:
+            body['state'] = 'RESOLVED'
+        elif resolved is False:
+            body['state'] = 'OPEN'
+        return resources.PullRequestCommentResource(
+            decode_json(self.conn.put(uri, json=body)),
+            self,
+            project=project,
+            slug=slug,
+            pr_id=request_id
+        )
+
+    def delete_pull_request_comment(self, project, slug, request_id, comment_id, version):
+        """Delete a pull request comment. Anyone can delete their own comment.
+        Only users with REPO_ADMIN and above may delete comments created by other users.
+
+        Args:
+            project (str): the project key
+            slug (str): the repo slug
+            request_id (int): the pull request ID#
+            comment_id (int): the comment ID#
+            version (int): the comment's current version.
+                This must be specified or BB will refuse to delete the comment.
+
+        Returns:
+            None
+
+        Raises:
+            BitbucketServerException: "You are attempting to modify a comment based on out-of-date information."
+                This occurs when you don't specify the correct version.
+        """
+        uri = f'projects/{project}/repos/{slug}/pull-requests/{request_id}/comments/{comment_id}'
+        body = {
+            'version': version
+        }
+        self.conn.delete(uri, json=body)
 
     def pull_request_diffs(self, project, slug, request_id, path=None,
             context_lines=None, diff_type=None, since_id=None, until_id=None,
@@ -2173,17 +2385,20 @@ class BitbucketServer(object):
         """Get the tasks associated with a pull request.
 
         Args:
-            project:
-            slug:
-            request_id:
+            project (str): the project key
+            slug (str): the repo slug
+            request_id (int): the pull request ID#
 
         Returns:
             list: TaskResources
         """
-        uri = f'projects/{project}/repos/{slug}/pull-requests/{request_id}/tasks'
-        return [resources.TaskResource(r, self) for r in self.conn.get_paged(uri)]
-
-    # TODO: create_task()
+        if self._server_version > (7, 2):
+            uri = f'projects/{project}/repos/{slug}/pull-requests/{request_id}/blocker-comments'
+            res = resources.PullRequestCommentResource
+        else:
+            uri = f'projects/{project}/repos/{slug}/pull-requests/{request_id}/tasks'
+            res = resources.TaskResource
+        return [res(r, self, project, slug, request_id) for r in self.conn.get_paged(uri)]
 
     def task(self, task_id):
         """Get a task by ID.
@@ -2194,6 +2409,8 @@ class BitbucketServer(object):
         Returns:
             TaskResource
         """
+        if self._server_version >= (8, 0, 0):
+            raise DeprecationWarning("this endpoint is deprecated in 8.0, use 'pull_request_comment'")
         uri = f'tasks/{task_id}'
         return resources.TaskResource(self.conn.get(uri))
 
@@ -2206,6 +2423,8 @@ class BitbucketServer(object):
         Returns:
             TaskResource: the updated task
         """
+        if self._server_version >= (8, 0, 0):
+            raise DeprecationWarning("this endpoint is deprecated in 8.0, use 'update_pull_request_comment'")
         uri = f'tasks/{task_id}'
         return resources.TaskResource(decode_json(self.conn.put(uri, json={'state': 'RESOLVED'})), self)
 
@@ -2218,6 +2437,8 @@ class BitbucketServer(object):
         Returns:
             TaskResource: the updated task
         """
+        if self._server_version >= (8, 0, 0):
+            raise DeprecationWarning("this endpoint is deprecated in 8.0, use 'update_pull_request_comment'")
         uri = f'tasks/{task_id}'
         return resources.TaskResource(decode_json(self.conn.put(uri, json={'state': 'OPEN'})), self)
 
@@ -2230,6 +2451,8 @@ class BitbucketServer(object):
         Returns:
             None
         """
+        if self._server_version >= (8, 0, 0):
+            raise DeprecationWarning("this endpoint is deprecated in 8.0, use 'delete_pull_request_comment'")
         uri = f'tasks/{task_id}'
         self.conn.delete(uri)
 
@@ -2241,11 +2464,13 @@ class BitbucketServer(object):
         Args:
             task_id (int): the task ID
             text (optional string): the task's text to update
-            state (optional string): the state of the
+            state (optional string): the state of the task
 
         Returns:
             TaskResource: the updated task
         """
+        if self._server_version >= (8, 0, 0):
+            raise DeprecationWarning("this endpoint is deprecated in 8.0, use 'update_pull_request_comment'")
         uri = f'tasks/{task_id}'
         data = {}
         if text:
@@ -2262,7 +2487,7 @@ class BitbucketServer(object):
                 Defaults to currently logged in user
 
         Returns:
-
+            list: SSHKeyResource
         """
         uri = 'keys'
         params = {}
@@ -2611,7 +2836,7 @@ class BitbucketServer(object):
                 Should be a name associated with the source of the report,
                 e.g. the tool name or report type.
             insight_json (dict): the contents of the report
-                Must cotain the following values:
+                Must contain the following values:
                     title (str): the title of the insight report
                 Optional:
                     details (str): description of the report
@@ -2642,8 +2867,11 @@ class BitbucketServer(object):
                         "type": "DURATION"
                     },
                     {
-                        "title": "Download link",
-                        "value": "http://example.com/path/to/download",
+                        "title": "Additional Link",
+                        "value": {
+                            "linktext": "Click here",
+                            "href": "http://example.com/path/to/download"
+                        },
                         "type": "LINK"
                     },
                     {

@@ -4,3 +4,6 @@ build/
 dist/
 .coverage
 *.egg-info/
+
+# Ignore Pycache
+*/__pycache__/
